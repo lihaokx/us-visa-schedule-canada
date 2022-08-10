@@ -26,7 +26,7 @@ def getInfo():
         'User-Agent': userAgent
     }
     session = requests.Session()
-    response = session.get('https://ais.usvisa-info.com/en-gb/niv/users/sign_in', headers=headers).text
+    response = session.get('https://ais.usvisa-info.com/en-ca/niv/users/sign_in', headers=headers).text
 
     preSession = session.cookies
 
@@ -61,12 +61,12 @@ def login(email, password):
     headers = {
         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9',
         'Accept-Encoding': 'gzip, deflate, br',
-        'Accept-Language': 'en-GB,en-US;q=0.9,en;q=0.8',
+        'Accept-Language': 'en-CA,en;q=0.9,zh-CN;q=0.8,zh;q=0.7,en-GB;q=0.6,en-US;q=0.5,zh-TW;q=0.4',
         'Connection': 'keep-alive',
         'Content-Type': 'application/x-www-form-urlencoded',
         'Host': 'ais.usvisa-info.com',
         'Origin': 'https://ais.usvisa-info.com',
-        'Referer': 'https://ais.usvisa-info.com/en-gb/niv/users/sign_in',
+        'Referer': 'https://ais.usvisa-info.com/en-ca/niv/users/sign_in',
         'Update-Insecure-Requests': '1',
         'User-Agent': userAgent,
         'Cookie': cookie
@@ -74,12 +74,14 @@ def login(email, password):
 
     loginSession = requests.Session()
 
-    loginResponse = loginSession.post('https://ais.usvisa-info.com/en-gb/niv/users/sign_in', headers=headers,
+    loginResponse = loginSession.post('https://ais.usvisa-info.com/en-ca/niv/users/sign_in', headers=headers,
                                       data=payload)
 
     loginSessionName = ''
     loginSessionValue = ''
 
+    # print("loginResponse.cookies: ")
+    # print( loginResponse.cookies)
     for c in loginResponse.cookies:
         loginSessionName = c.name
         loginSessionValue = c.value
@@ -149,6 +151,7 @@ def execute():
     expectedDate = data['expectedDate']
     # 播放声音提醒有期望的slot。大家也可以删掉/改变播放声音部分/路径如果不喜欢
     notiSoundPath = data['notiSoundPath']
+    errorSoundPath = data['errorSoundPath']
     # sleep时间，单位秒数
     sleepTime = data['sleep']
     # user-agent
@@ -163,6 +166,7 @@ def execute():
     # 登录
     cookie = login(email, password)
 
+    # print("cookie: "+cookie)
     while True:
 
         try:
@@ -198,32 +202,35 @@ def execute():
                 'User-Agent': userAgent
             }
 
-            londonSession = requests.Session()
+            montrealSession = requests.Session()
 
-            # send requests and get london and belfast schedule responses
-            londonResponse = londonSession.get(
-                "https://ais.usvisa-info.com/en-gb/niv/schedule/" + scheduleID + "/appointment/days/17.json?appointments[expedite]=false",
+            # send requests and get montreal and Ottawa schedule responses
+            montrealResponse = montrealSession.get(
+                "https://ais.usvisa-info.com/en-ca/niv/schedule/" + scheduleID + "/appointment/days/91.json?appointments[expedite]=false",
                 headers=headers)
 
-            belfastResponse = requests.get(
-                "https://ais.usvisa-info.com/en-gb/niv/schedule/" + scheduleID + "/appointment/days/16.json?appointments[expedite]=false",
+            ottawaResponse = requests.get(
+                "https://ais.usvisa-info.com/en-ca/niv/schedule/" + scheduleID + "/appointment/days/92.json?appointments[expedite]=false",
                 headers=headers)
             print("时间: " + str(time.asctime()))
 
-            # london slot check
-            earliestLondon = londonResponse.text[10:20]
-            print('London:')
-            if len(londonResponse.text) == 2:
-                print("呜呜呜伦敦slot都没有啦")
-            elif earliestLondon == "Your sessi" or earliestLondon == "You need t":
+            # montreal slot check
+            earliestMontreal = montrealResponse.text[10:20]
+            print('montrealResponse: ')
+            print( montrealResponse.text)
+            print('earliestMontreal: ')
+            print( earliestMontreal)
+            if len(montrealResponse.text) == 2:
+                print("呜呜呜montreal slot都没有啦")
+            elif earliestMontreal == "Your sessi" or earliestMontreal == "You need t":
                 retry()
-            elif earliestLondon > expectedDate:
-                print('可预定但超过期望时间：' + earliestLondon)
-                print('链接: ' + 'https://ais.usvisa-info.com/en-egb/niv/schedule/' + scheduleID + '/appointment')
-            elif earliestLondon <= expectedDate:
-                print('！！可预定！！London 最早可预定时间: ' + earliestLondon)
-                print('链接: ' + 'https://ais.usvisa-info.com/en-gb/niv/schedule/' + scheduleID + '/appointment')
-                mailContent = '！！可预定！！London 最早可预定时间: ' + earliestLondon + '\n' + '链接: ' + 'https://ais.usvisa-info.com/en-gb/niv/schedule/' + scheduleID + '/appointment'
+            elif earliestMontreal > expectedDate:
+                print('可预定但超过期望时间：' + earliestMontreal)
+                print('链接: ' + 'https://ais.usvisa-info.com/en-ca/niv/schedule/' + scheduleID + '/appointment')
+            elif earliestMontreal <= expectedDate:
+                print('！！可预定！！Montreal 最早可预定时间: ' + earliestMontreal)
+                print('链接: ' + 'https://ais.usvisa-info.com/en-ca/niv/schedule/' + scheduleID + '/appointment')
+                mailContent = '！！可预定！！Montreal 最早可预定时间: ' + earliestMontreal + '\n' + '链接: ' + 'https://ais.usvisa-info.com/en-ca/niv/schedule/' + scheduleID + '/appointment'
                 if isSMTP:
                     sendMail(mailContent)
                 if isMailGun:
@@ -233,20 +240,21 @@ def execute():
             else:
                 retry()
 
-            # belfast slot check
-            earliestBelfast = belfastResponse.text[10:20]
-            print('Belfast:')
-            if len(belfastResponse.text) == 2:
-                print("呜呜呜贝法slot都没有啦\n")
-            elif earliestBelfast == "Your sessi" or earliestBelfast == "You need t":
+            # ottawa slot check
+            earliestOttawa = ottawaResponse.text[10:20]
+            print('ottawaResponse:' )
+            print(ottawaResponse)
+            if len(ottawaResponse.text) == 2:
+                print("呜呜呜Ottawa slot都没有啦\n")
+            elif earliestOttawa == "Your sessi" or earliestOttawa == "You need t":
                 retry()
-            elif earliestBelfast > expectedDate:
-                print('可预定但超过期望时间：' + earliestBelfast)
-                print('链接: ' + 'https://ais.usvisa-info.com/en-gb/niv/schedule/' + scheduleID + '/appointment' + '\n')
-            elif earliestBelfast <= expectedDate:
-                print('！！可预定！！Belfast 最早可预定时间: ' + earliestBelfast)
-                print('链接: ' + 'https://ais.usvisa-info.com/en-gb/niv/schedule/' + scheduleID + '/appointment' + '\n')
-                mailContent = '！！可预定！！Belfast 最早可预定时间: ' + earliestBelfast + '\n' + '链接: ' + 'https://ais.usvisa-info.com/en-gb/niv/schedule/' + scheduleID + '/appointment'
+            elif earliestOttawa > expectedDate:
+                print('可预定但超过期望时间：' + earliestOttawa)
+                print('链接: ' + 'https://ais.usvisa-info.com/en-ca/niv/schedule/' + scheduleID + '/appointment' + '\n')
+            elif earliestOttawa <= expectedDate:
+                print('！！可预定！！Ottawa 最早可预定时间: ' + earliestOttawa)
+                print('链接: ' + 'https://ais.usvisa-info.com/en-ca/niv/schedule/' + scheduleID + '/appointment' + '\n')
+                mailContent = '！！可预定！！Ottawa 最早可预定时间: ' + earliestOttawa + '\n' + '链接: ' + 'https://ais.usvisa-info.com/en-ca/niv/schedule/' + scheduleID + '/appointment'
                 if isSMTP:
                     sendMail(mailContent)
                 if isMailGun:
@@ -261,10 +269,10 @@ def execute():
             # 循环counter次后更新session以保持登录状态，这里可以改刷新频率。但是请注意经过测试session过期时间大概为30分钟，刷新频率最好不要大于30min/次
             counter = counter + 1
             if counter == 10:
-                londonCookie = londonResponse.cookies
-                newLondonCookiePart = json.dumps(requests.utils.dict_from_cookiejar(londonCookie)).split("\"")[3]
-                newLondonCookie = "_yatri_session=" + newLondonCookiePart
-                cookie = newLondonCookie
+                montrealCookie = montrealResponse.cookies
+                newMontrealCookiePart = json.dumps(requests.utils.dict_from_cookiejar(montrealCookie)).split("\"")[3]
+                newMontrealCookie = "_yatri_session=" + newMontrealCookiePart
+                cookie = newMontrealCookie
 
                 counter = 0
 
@@ -276,6 +284,7 @@ def execute():
             print('发生错误：')
             print(e.__class__)
             print(e)
+            playsound(errorSoundPath)
             retry()
 
 
